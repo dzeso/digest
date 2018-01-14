@@ -4,11 +4,13 @@ function runTest_get_data() {
                  'getNewsById',
                  'getNewsByDate',
                  'getSkipsDateInNews',
-                 'getLastNewsDate'
+                 'getLastNewsDate',
+                 'getNewsForPeriod',
+                 'getNewsFromId'
                 ]);
 }
 
-function getNews(period) {
+function getNewsForPeriod(period) {
 
   var currentDate = new Date(), 
       result = [],
@@ -16,6 +18,7 @@ function getNews(period) {
       periodEnd = '',      
       dayNews;
   
+  if (!period) period = {};
   periodEnd = period.end ?  period.end : getDateShif ({date: currentDate});
   periodStart = period.start ?  period.start : getDateShif ({date: periodEnd, shift: -UPLOAD_PERIOD_MAX});
   
@@ -31,12 +34,42 @@ function getNews(period) {
   return result;
 }
 
-function getNews_test() {
+function getNewsForPeriod_test() {
 return runGroupTests(
-    {name: 'getNews',
-     should: [7, 8, 12, 6],
-     data: [{start: '2018-01-02', end: '2018-01-03'}, {end: '2018-01-03'}, {start: '2018-01-02'}, 
-           {start: '2018-01-03', end: '2018-01-02'}],
+    {name: 'getNewsForPeriod',
+     should: [7],
+     data: [{start: '2018-01-02', end: '2018-01-03'}],
+     online: 'TEST_STOP_SQL_EXEC',
+     compare: [
+       "pattern === lengthTest(result)"
+     ]
+    });
+}
+
+function getNewsFromId(id) {
+  var result = [];
+  
+  if (!id) return result;
+  
+  var idNewsList = getDataFromTable(
+      {sql: "SELECT idnews FROM news WHERE idnews > ?",
+       resultTypes: ['Int'],
+       whereData: [id],
+       whereTypes: ['Int']
+      });
+  
+  for (var i = 0, len_i = idNewsList.length; i < len_i; i++) {
+    result.push(getNewsById(idNewsList[i]));
+  }
+    
+  return result;
+}
+
+function getNewsFromId_test() {
+return runGroupTests(
+    {name: 'getNewsFromId',
+     should: [2,0,0],
+     data: [1354,null,undefined],
      online: 'TEST_STOP_SQL_EXEC',
      compare: [
        "pattern === lengthTest(result)"
@@ -47,7 +80,8 @@ return runGroupTests(
 function getNewsByDate(date) {
   if (!date) return null;
   
-  var idNewsList = getCacheObject(CACHE_NEWS_BY_DATE + date);
+  var idNewsList;
+  if (!isToday(date)) idNewsList = getCacheObject(CACHE_NEWS_BY_DATE + date);
   if (!idNewsList) {
     idNewsList = getDataFromTable(
       {sql: "SELECT idnews FROM news WHERE date = ?",
@@ -55,7 +89,7 @@ function getNewsByDate(date) {
        whereData: [date],
        whereTypes: ['String']
       });
-    if (idNewsList.length > 0) 
+    if (idNewsList.length > 0 && !isToday(date)) 
       setCacheObject({key: CACHE_NEWS_BY_DATE + date, value: idNewsList, time: CACHE_MAX_TIME});
   }
   
@@ -72,7 +106,7 @@ function getNewsByDate_test() {
 return runGroupTests(
     {name: 'getNewsByDate',
      should: [1, 4],
-     data: ['2018-01-01', '2018-01-02'],
+     data: [Utilities.formatDate(new Date(), TIME_ZONE, "yyyy-MM-dd"), '2018-01-01', '2018-01-02'],
      online: 'TEST_STOP_SQL_EXEC',
      compare: [
        "pattern === lengthTest(result)"
@@ -184,11 +218,12 @@ function getNewsById(id) {
       });
     
     result = {
+      id: id,
       title: news.dataset[0][0],
       idsource: news.dataset[0][1],
       rating: news.dataset[0][2],
       date: news.dataset[0][3],
-      time: news.dataset[0][3],
+      time: news.dataset[0][4],
       link: news.dataset[0][5],
       tags: tags,
       rubrics: rubrics,

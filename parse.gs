@@ -121,15 +121,13 @@ function getDataFromNewsPage(page) {
 //    todo ??? сделать проверку функцией в блоке записи данных
     if (data.title === '' ||
         data.date === '' ||
-        data.tags.length * 
-        data.rubrics.length *
         data.body.length  < 1) {
-      data.code = CODE_UNCORRECT_ARTICLE; 
+      data.code = LOG_EVENT_UNCORRECT_ARTICLE; 
       data.isCorrect = false;
     }
   }
   else {
-    data.code = CODE_UNSUPPORTED_TYPE_ARTICLE; 
+    data.code = LOG_EVENT_UNSUPPORTED_TYPE_ARTICLE; 
     data.isCorrect = false;
   }
   return data;
@@ -479,6 +477,8 @@ function isSupportedTypeArticle(text) {
 //////////////////////////////////
 
 function getDataFromNewsPage_test() {
+  var page = getPageByUrl("ria.ru/culture/20180109/1512303740.html");
+  var qq = page;
   return runGroupTests(
     {name: 'getDataFromNewsPage',
      should: [
@@ -489,7 +489,7 @@ function getDataFromNewsPage_test() {
         bodyLength: 0,
         linkIndex: 0,
         link: undefined,
-        code:  CODE_UNSUPPORTED_TYPE_ARTICLE,
+        code:  LOG_EVENT_UNSUPPORTED_TYPE_ARTICLE,
         isCorrect: false
        },
        {tags:
@@ -531,6 +531,7 @@ function getDataFromNewsPage_test() {
        }
      ],
      data: [
+       page.text,
        include('лонгрид'),
        include('интервью с вопросами'),
        include('простая статья'),

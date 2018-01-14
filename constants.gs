@@ -7,9 +7,9 @@ var REFERENCE_TAG_TYPES = ['undefined', 'event','location', 'person', 'organizat
     REFERENCE_STATUS = ['загружена'],
     REFERENCE_STATUS_LOADED = 1;
 
-var CODE_UNSUPPORTED_TYPE_ARTICLE = 100,
-    CODE_CORRECT_ARTICLE = 200,
-    CODE_UNCORRECT_ARTICLE = 201,
+//var CODE_UNSUPPORTED_TYPE_ARTICLE = 100,
+var CODE_CORRECT_ARTICLE = 200,
+//    CODE_UNCORRECT_ARTICLE = 201,
     CODE_SAVE_SUCCESSFULLY = 300,
     CODE_SAVE_FAILD = 301;
 
@@ -37,8 +37,11 @@ var TEST_STOP_WEB_LOAD = false,
 
 var RETURN_GENERATED_KEYS = 1;
 
-var LOG_EVENT_TEST = 0,
-    LOG_EVENT_INFO = 1;
+var LOG_EVENT_INFO = 1,
+    LOG_EVENT_UNSUPPORTED_TYPE_ARTICLE = 2,
+    LOG_EVENT_UNCORRECT_ARTICLE = 3,
+    LOG_EVENT_ERROR_SAVING = 4,
+    LOG_EVENT_TEST = 0;
 
 function runTests() { 
   
@@ -57,12 +60,12 @@ function runTests() {
 
 // TODO сделать либу для подключения либ
 // Credit Brian @github
-var LIBRARIES = {
+var LOCAL_LIB = {
   he:  "he",
 }
 
-Object.keys(LIBRARIES).forEach(function(library) {
-  newFunc = loadJSFromHTMLFile(LIBRARIES[library]);
+Object.keys(LOCAL_LIB).forEach(function(library) {
+  newFunc = loadJSFromHTMLFile(LOCAL_LIB[library]);
   eval('var ' + library + ' = ' + newFunc);  
 });
 
@@ -70,6 +73,17 @@ function loadJSFromHTMLFile(file) {
   eval(HtmlService.createTemplateFromFile(file).getRawContent());  
  }
 
-//function loadJSFromUrl(url) {
-//  return eval(UrlFetchApp.fetch(url).getContentText());
-//}
+var GLOBAL_LIB = {
+  lodash:  "cdn.jsdelivr.net/npm/lodash@4.17.4/lodash.js",
+}
+
+//https://cdn.jsdelivr.net/npm/lodash@4.17.4/string.js
+
+Object.keys(GLOBAL_LIB).forEach(function(library) {
+  newFunc = loadJSFromUrl(GLOBAL_LIB[library]);
+  eval('var ' + library + ' = ' + newFunc);  
+});
+
+function loadJSFromUrl(url) {
+  eval(UrlFetchApp.fetch(url).getContentText());
+}

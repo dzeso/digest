@@ -1,11 +1,11 @@
 function runTest_scraping() { 
   
   runBlockTests([
-    'uploadDayNews',
-    'uoloadCurrentNews',
-    'getListDaysForUploading',
-    'uploadDataFromNewsPage',
-    'getDayNewsList'
+    'uploadDayNews', // обработка списка новостей за день
+    'uoloadCurrentNews', // формирование текущего списка дней и загрузка новостей по ним в базу 
+    'getListDaysForUploading', //определение еще не загруженных новостей со страницы новостей за день
+    'uploadDataFromNewsPage' // полная обработка вебстраницы с новостью
+//    'uploadSkippedNews' //поиск и загрузка пропущенных новостей. закоменчен так как тяжелый процесс. todo придумать как такое тестировать
     ]);
 }
 
@@ -30,7 +30,13 @@ function uploadDataFromNewsPage (param) {
     var resultSaving = saveNews(data);
     resultUploading.done = resultSaving.done;   
     resultUploading.code = resultSaving.code;
-  } 
+  } else {
+    saveCrawlerLog({
+      message: "Новость не была загружена",
+      obj: RIA_URL_PREFIX + param.link + RIA_URL_POSFIX,
+      source: "uploadDataFromNewsPage",
+      event: data.code});
+  }
   return resultUploading;
 }
 
@@ -46,8 +52,9 @@ function uoloadCurrentNews(date) {
      end: currentNewsDay });
   for (var i = 0, len_i = listDaysForUploading.length; i < len_i; i++) {
     dayNews = uploadDayNews(listDaysForUploading[i]);
-    if (dayNews.length > 0) result.push(dayNews); //??? Смысл этого действия? Результат используется только в тесте
-    //todo кеширование результатов?
+    for (var j = 0, len_j = dayNews.length; j < len_j; j++) {
+      if (dayNews.length > 0) result.push(dayNews[j]);
+    }
   }
   return result;
 }
@@ -102,6 +109,15 @@ function getDayNewsPage(day) {
 
 
 //////////////////////////////
+
+function uploadSkippedNews_test() { // заглушка, призапуске выполняется тяжелый процесс
+  return runGroupTests(
+    {name: 'uploadSkippedNews',
+     should: [true],
+     data: [true],
+     online: 'TEST_STOP_WEB_LOAD'
+    });
+}
 
 function uploadDayNews_test() {
   return runGroupTests(

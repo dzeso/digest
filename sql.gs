@@ -342,10 +342,22 @@ function getSqlConnection(login) {
 }
 
 function saveCrawlerLog(log) {
-  return doInsert({sql: 'INSERT INTO crawler_logger (date, log, event) values (NOW(),?,?)',
+  if(!log || !log.message) {
+    Logger.log("[saveCrawlerLog]: попытка сохранить пустое собщение");
+    return {isOk: false,
+            count: 0,
+            error: '',
+            generatedKey: 0};
+  }
+  var obj = (typeof log.obj === 'object') ? JSON.stringify(log.obj) : log.obj,
+      message = _.truncate(log.message, {'length': 255,'omission': ' [...]'}),
+      source = _.truncate(log.source, {'length': 124,'omission': ' [...]'}); 
+  obj = _.truncate(obj, {'length': 1024,'omission': ' [...]'});
+  
+  return doInsert({sql: 'INSERT INTO crawler_logger (date, source, obj, log, event) values (NOW(),?,?,?,?)',
                    isCommit: true,
-                   data: [log.message, log.event],
-                   types: ['String', 'Int']});
+                   data: [source, obj, message, log.event],
+                   types: ['String', 'String', 'String', 'Int']});
 }
 
 /////////////////////////
@@ -525,8 +537,10 @@ function saveCrawlerLog_test() {
   return runGroupTests(
     {name: 'saveCrawlerLog',
      should: [1],
-     data: [ {message: 'Тест работы функции saveCrawlerLog',
-              event: LOG_EVENT_TEST},
+     data: [{message: 'Тест работы функции saveCrawlerLog',
+              obj: {test: {subtest: 'test'}},
+              source: "saveParagraphReference",
+              event: LOG_EVENT_TEST}
      ],
      compare: [
        '(result.count === pattern)'

@@ -81,7 +81,7 @@ function saveNews(data) {
                 generatedKey: null},
       conn = getConn(),
       dt = splitDateTime(data.date);
-  
+   
   if (!conn.isOk) {
       return result
     }
@@ -147,7 +147,7 @@ function saveNewsRaw(save) {
 
 function saveNewsRubrics(save) {  
   var rubric, 
-      result = {isOk: false};
+      result = {isOk: true};
   for (var i = 0, len_i = save.rubrics.length; i < len_i; i++) {
     rubric = getRefRubricIdBySynonym(save.rubrics[i]);
     if (!rubric.isOk) {
@@ -206,7 +206,7 @@ function saveNewRubricToRef_test() {
 
 function saveNewsTags(save) {  
   var tag, 
-      result = {isOk: false};
+      result = {isOk: true};
   for (var i = 0, len_i = save.tags.length; i < len_i; i++) {
     tag = getRefTagIdBySynonym(save.tags[i]);
     if (!tag.isOk) {
@@ -288,7 +288,11 @@ function saveParagraphReference(save) {
   }
   result = doInsert(dataToInset);
   if (!result.isOk) {
-    Logger.log(result)
+    saveCrawlerLog({
+      message: "Не удалось сохранить данные",
+      obj: result.error,
+      source: "saveParagraphReference",
+      event: LOG_EVENT_ERROR_SAVING});
     // todo запись в лог про невозможнось сохранить
   }     
   return result.isOk;

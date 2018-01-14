@@ -18,6 +18,7 @@ function runTest_lib() {
   runTest('getDaysLag');
   runTest('getDatesListLag');
   runTest('getDateShif');
+  runTest('isToday');
   
   //  работа с преобразованием типов
   
@@ -201,7 +202,7 @@ function getPageByUrl(url) {
 
 function cleanHtmlForParsing(text) {
   if (!text) return text;
-  var result = text.replace(/\r|\n|<br>/ig, ' ');
+  var result = text.replace(/\r|\n|<br>|&/ig, ' ');
   result = result.replace(/<script.*?<\/script>/mig, '');
   result = result.replace(/<img.*?>/mig, '');
   result = result.replace(/<input.*?>/mig, '');
@@ -247,6 +248,18 @@ function getDateInNewsFormat(date) {
 
 function cleanDateForLink(date) { 
   return (date === undefined ) ? '' : date.replace(/\D/g,''); 
+}
+
+function isToday(date) { 
+  return (Utilities.formatDate(new Date (date), TIME_ZONE, "yyyy-MM-dd") === Utilities.formatDate(new Date (), TIME_ZONE, "yyyy-MM-dd") ) ? true : false 
+}
+
+function isToday_test() {
+  return runGroupTests(
+    {name: 'isToday',
+     should: [false, true],
+     data: [ "2018-01-03", new Date ()]
+    });
 }
 
 function getDateShif(param) {
@@ -456,11 +469,11 @@ function cleanHtmlForParsing_test() {
   return runGroupTests(
     {name: 'cleanHtmlForParsing',
      should: [
-       "Entity:&nbsp;Bad: /1508263080.html",
+       "Entit y:&nbsp;Bad: /1508263080.html",
        "alert('new line?')",
        "alert('new line?')</img><img"],
      data: [
-       "Entity:&nbsp;Bad:<script>\ralert('new\nline?')</script><br>/1508263080.html",
+       "Entit&y:&nbsp;Bad:<script>\ralert('new\nline?')</script><br>/1508263080.html",
        "\ralert('new\nline?')",
        "<img что угодно тут/><br>\ralert('new\nline?')</img><img "]
     });
