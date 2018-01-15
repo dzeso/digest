@@ -20,6 +20,11 @@ function runTest_lib() {
   runTest('getDateShif');
   runTest('isToday');
   
+//  работа со строками
+  
+  runBlockTests(['validateTextLength'
+                ]);
+                
   //  работа с преобразованием типов
   
   runBlockTests(['isNumber'
@@ -34,6 +39,20 @@ function runTest_lib() {
                  'setCacheObject',
                  'setCacheId'
                 ]); 
+}
+
+function validateTextLength(data) {
+  if(!data) return data;
+  var qq = _.truncate(data.text, {'length': data.length,'omission': ' [...]'});
+  return  _.truncate(data.text, {'length': data.length,'omission': ' [...]'});
+}
+
+function validateTextLength_test() {
+  return runGroupTests(
+    {name: 'validateTextLength',
+     should: [undefined ,'', "12 [...]", "1234567890"],
+     data: [undefined, {}, {text: "1234567890", length: 8},{text: "1234567890", length: 12}]
+    });
 }
 
 function getCache(key) {
@@ -202,13 +221,29 @@ function getPageByUrl(url) {
 
 function cleanHtmlForParsing(text) {
   if (!text) return text;
-  var result = text.replace(/\r|\n|<br>|&/ig, ' ');
+  var result = removeHttpEntities(text);
+  result = result.replace(/\r|\n|<br>|&/ig, ' ');
   result = result.replace(/<script.*?<\/script>/mig, '');
   result = result.replace(/<img.*?>/mig, '');
   result = result.replace(/<input.*?>/mig, '');
   result = result.replace(/<meta.*?>/mig, '');
   result = result.replace(/<link.*?>/mig, '');
+  qq = result.trim();
   return result.trim();
+}
+
+function cleanHtmlForParsing_test() {
+  return runGroupTests(
+    {name: 'cleanHtmlForParsing',
+     should: [
+       "Entit y: Bad: /1508263080.html",
+       "alert('new line?')",
+       "alert('new line?')</img><img"],
+     data: [
+       "Entit&y:&nbsp;Bad:<script>\ralert('new\nline?')</script><br>/1508263080.html",
+       "\ralert('new\nline?')",
+       "<img что угодно тут/><br>\ralert('new\nline?')</img><img "]
+    });
 }
 
 function cleanWebLink(link) {
@@ -465,17 +500,5 @@ function removeHttpEntities_test() {
     });
 }
 
-function cleanHtmlForParsing_test() {
-  return runGroupTests(
-    {name: 'cleanHtmlForParsing',
-     should: [
-       "Entit y:&nbsp;Bad: /1508263080.html",
-       "alert('new line?')",
-       "alert('new line?')</img><img"],
-     data: [
-       "Entit&y:&nbsp;Bad:<script>\ralert('new\nline?')</script><br>/1508263080.html",
-       "\ralert('new\nline?')",
-       "<img что угодно тут/><br>\ralert('new\nline?')</img><img "]
-    });
-}
+
 

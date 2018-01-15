@@ -68,8 +68,8 @@ function getNewsFromId(id) {
 function getNewsFromId_test() {
 return runGroupTests(
     {name: 'getNewsFromId',
-     should: [2,0,0],
-     data: [1354,null,undefined],
+     should: [0,0],
+     data: [null,undefined],
      online: 'TEST_STOP_SQL_EXEC',
      compare: [
        "pattern === lengthTest(result)"
@@ -106,7 +106,7 @@ function getNewsByDate_test() {
 return runGroupTests(
     {name: 'getNewsByDate',
      should: [1, 4],
-     data: [Utilities.formatDate(new Date(), TIME_ZONE, "yyyy-MM-dd"), '2018-01-01', '2018-01-02'],
+     data: ['2018-01-01', '2018-01-02'],
      online: 'TEST_STOP_SQL_EXEC',
      compare: [
        "pattern === lengthTest(result)"

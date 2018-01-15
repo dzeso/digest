@@ -5,7 +5,8 @@ function runTest_save_data() {
                  'saveNewTagToRef',
                  'saveParagraphs',
                  'saveNewRubricToRef',
-                 'saveNewsRubrics'
+                 'saveNewsRubrics',
+                 'saveNews'
                 ]);
 }
 
@@ -79,8 +80,8 @@ function saveNews(data) {
   var result = {done: false,
                 code: CODE_SAVE_FAILD,
                 generatedKey: null},
-      conn = getConn(),
-      dt = splitDateTime(data.date);
+      conn = getConn();
+  var dt = splitDateTime(data.date);
    
   if (!conn.isOk) {
       return result

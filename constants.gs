@@ -2,7 +2,7 @@ var RIA_URL_PREFIX = 'ria.ru',
     RIA_URL_POSFIX = '.html',
     RIA_SOURCE_ID = 1;
 
-var REFERENCE_TAG_TYPES = ['undefined', 'event','location', 'person', 'organization'],
+var REFERENCE_TAG_TYPES = ['undefined', 'event','location', 'person', 'organization', 'product'],
     REFERENCE_SOURCE = ['ria'],
     REFERENCE_STATUS = ['загружена'],
     REFERENCE_STATUS_LOADED = 1;
@@ -40,7 +40,9 @@ var RETURN_GENERATED_KEYS = 1;
 var LOG_EVENT_INFO = 1,
     LOG_EVENT_UNSUPPORTED_TYPE_ARTICLE = 2,
     LOG_EVENT_UNCORRECT_ARTICLE = 3,
-    LOG_EVENT_ERROR_SAVING = 4,
+    LOG_EVENT_ERROR_SAVING = 50,
+    LOG_EVENT_ERROR_PARSING = 51,
+    LOG_EVENT_ERROR_ITEM_DONT_FIND_IN_REF = 52,
     LOG_EVENT_TEST = 0;
 
 function runTests() { 

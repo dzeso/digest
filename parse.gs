@@ -30,11 +30,11 @@ function getDayNewsList(param) {
   var listLinks = getListOfValueByParsingedOfHtmlPage (
     {regex: '/\\w+/'+ cleanDateForLink(param.day.date) + '/\\d+',
      flag: 'g',
-     page: text});
+     text: text});
   var listTimes = getListOfValueByParsingedOfHtmlPage (
     {regex: dateTagBegin + '\\d\\d:\\d\\d' + dateTagEnd,
      flag: 'g',
-     page: text});
+     text: text});
   if (listLinks.length === listTimes.length) {
    
     var j=0, time = '', timeParam;
@@ -43,6 +43,8 @@ function getDayNewsList(param) {
     for (var i = 0, len_i = listLinks.length; i < len_i; i++) { 
       //       todo проверка что время новости полученное после разбора больше чем время переданное
       //       если ок, то сохраняем, иначе - пропускаем эту новость
+      
+      // убрать контроль времени, проверку перенести в сохранение
       time = listTimes[i].match(/\d\d:\d\d/)[0];
       if (time > timeParam) {
         result[j++] = 
@@ -52,7 +54,11 @@ function getDayNewsList(param) {
     }
   }
   else {
-//    todo запись в лог о том, что не удалось разобрать страницу с сылками на новости дня
+    saveCrawlerLog({
+      message: "Не удалось корректно разобрать странцу с новостями за день. Список ссылок на новости не равен списку времени публикации ",
+      obj: param,
+      source: "getDayNewsList",
+      event: LOG_EVENT_ERROR_PARSING});
     return [];
   }
   return result;
@@ -144,7 +150,6 @@ function prepareArticlePageForParsing (page) {
      firstMark: '<div class="b-article__main">',
      lastMark: '<div class="b-comments',
      endMark: '</div>'});
-  text = removeHttpEntities(text);
   text = cleanHtmlForParsing(text);
   return text;
   
@@ -368,6 +373,9 @@ function getArticleTags(text) {
 }
 
 function splitDateTime(dt) {
+  if (!dt) return { 
+    date: "",
+    time: ""};
   var array = dt.split('T');
   if (!array[1]) array[1]='00:00';
   var result = {date: array[0],
@@ -400,7 +408,12 @@ function extractRefTagType(text) {
       return i;
     }
   }
-  // TODO написать в лог проблем загрузки данных, что не найден тэг
+  
+  saveCrawlerLog({
+    message: "Тэг ["+text+"] не найден в справочнике",
+    obj: REFERENCE_TAG_TYPES,
+    source: "extractRefTagType",
+    event: LOG_EVENT_ERROR_ITEM_DONT_FIND_IN_REF});
   
   return 0; 
 }
@@ -531,7 +544,6 @@ function getDataFromNewsPage_test() {
        }
      ],
      data: [
-       page.text,
        include('лонгрид'),
        include('интервью с вопросами'),
        include('простая статья'),

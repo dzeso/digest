@@ -167,11 +167,13 @@ function getListOfValueByParsingedOfHtmlPage(params) {
 //  Сдеално на безе примера "Пример: поиск последовательных сопоставлений" 
 //  https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec
 
+// params - regex: '/\\w+/20170102/\\d+', flag: 'g', text: text
+
   var regex = new RegExp(params.regex,params.flag);
   var m;
   var i = 0,
       list = [];
-  while ((m = regex.exec(params.page)) !== null) {
+  while ((m = regex.exec(params.text)) !== null) {
     if (m[0] === 'undefined'){
       break;
     }
@@ -191,14 +193,14 @@ function getListOfValueByParsingedOfHtmlPage_test() {
      should: [0,0,6,0],
      data: [
        {},
-       {page: "page",
+       {text: "page",
         day: "day"},
        {regex: '/\\w+/20170101/\\d+',
         flag: 'g',
-        page: page,},
+        text: page},
        {regex: '/\\w+/20170102/\\d+',
         flag: 'g',
-        page: page,}
+        text: page}
      ],
      compare: [
        "pattern === lengthTest(result)"
