@@ -1,20 +1,18 @@
 function runTest_save_data() {   
-  runBlockTests(['saveNewsRaw',
-                 'saveNewsTags',
-                 'saveParagraphReference',
-                 'saveNewTagToRef',
-                 'saveParagraphs',
-                 'saveNewRubricToRef',
-                 'saveNewsRubrics',
-                 'saveNews'
-                ]);
+  runBlockTests([
+    'saveNewsTags',
+    'saveParagraphReference',
+    'saveNewTagToRef',
+    'saveParagraphs',
+    'saveNewRubricToRef',
+    'saveNewsRubrics',
+    'saveNews'
+  ]);
 }
 
 function saveParagraphs(save) {  
   var result = {isOk: false};
   for (var i = 0, len_i = save.paragraphs.length; i < len_i; i++) {
-    // проверку на тип параграфа и если это только ссылка (6) то его не сохранять
-    // а писать только в ссылки
     (save.paragraphs[i].typeText === 6) ? result.isOk = true : result = doInsert(
       {connection: save.connection,
        sql: 'INSERT INTO news_paragraphs (idnews, text, type) values (?,?,?)',
@@ -77,30 +75,47 @@ function saveParagraphs_test() {
 }
 
 function saveNews(data) {
-  var result = {done: false,
-                code: CODE_SAVE_FAILD,
-                generatedKey: null},
-      conn = getConn();
-  var dt = splitDateTime(data.date);
-   
-  if (!conn.isOk) {
-      return result
+  
+  var conn = getConn(),
+      flUpdateNews = false,
+      result = {
+        done: false,
+        code: CODE_SAVE_FAILED,
+        generatedKey: null
+      },
+      news = {
+        title: data.title, 
+        sourceId: data.sourceId, 
+        key: data.key, 
+        lastEdited: (data.lastEdited) ? data.lastEdited : (data.dateUpdate) ? data.dateUpdate : data.date, 
+        dt: splitDateTime(data.date), 
+        link: data.link
+      };
+
+  if (data.id) {
+    if (!data.dateUpdate || data.dateUpdate <= data.lastEdited) {
+      return {done: true,
+              code: CODE_SAVE_SKIPED,
+              generatedKey: null};
+    } else {
+      flUpdateNews = true;
+      news.lastEdited = data.dateUpdate;
+      news.key = (new Date()).getTime().toString();
+      news.link = (new Date()).getTime().toString();
     }
-  startTransaction(conn.jdbc);
+  }
+  
+  if (!conn.isOk) return result;
+  else startTransaction(conn.jdbc);
+  
   var insertedNews = doInsert(
     {connection: conn.jdbc,
-     sql: 'INSERT INTO news (title, idsource, key_from_source, date, time, link) values (?,?,?,?,?,?)',
-     data: [data.title, data.sourceId, data.key, dt.date, dt.time, data.link],
-     types: ['String', 'Int', 'String', 'String', 'String', 'String']});
+     sql: 'INSERT INTO news (title, idsource, key_from_source, last_edited, date, time, link) values (?,?,?,?,?,?,?)',
+     data: [news.title, news.sourceId, news.key, news.lastEdited, news.dt.date, news.dt.time, news.link],
+     types: ['String', 'Int', 'String', 'String', 'String', 'String', 'String']});
   
   switch (insertedNews.isOk) {
     case true:
-      if (!saveNewsRaw ({connection: conn.jdbc,
-                         generatedKey: insertedNews.generatedKey,
-                         zip: data.zip})) {
-        insertedNews.isOk = false;
-        break;
-      }
     case 'Rubrics':
       if (!saveNewsRubrics ({connection: conn.jdbc,
                              generatedKey: insertedNews.generatedKey,
@@ -125,25 +140,98 @@ function saveNews(data) {
   }
 
   if (insertedNews.isOk) {
-    commitTransaction(conn.jdbc);
-    result = {done: true,
-              code: CODE_SAVE_SUCCESSFULLY,
-              generatedKey: insertedNews.generatedKey};
-  } else { 
-    rollbackTransaction(conn.jdbc);
+    if (flUpdateNews) {
+      doDelete({
+        connection: conn.jdbc,
+        sql: "DELETE FROM news WHERE idnews = " + data.id
+      });
+      var updatedNews =  
+          doUpdate({
+            connection: conn.jdbc,
+            sql: 'UPDATE news SET idnews = ?, link = ?, key_from_source = ? WHERE idnews = ?',
+            data: [ data.id, data.link, data.key, insertedNews.generatedKey],
+            types: ['Int', 'String', 'String', 'Int']
+          });
+      if (updatedNews.isOk) result = {
+        done: true,
+        code: CODE_UPDATE_SUCCESSFULLY,
+        generatedKey: data.id }; 
+      else result = {
+        done: true,
+        code: CODE_UPDATE_FAILED,
+        generatedKey: data.id
+      };
+    } else {
+      result = {
+        done: true,
+        code: CODE_SAVE_SUCCESSFULLY,
+        generatedKey: insertedNews.generatedKey
+      };
+    } 
   }
-  closeSqlConnection({conn: conn.jdbc})
-  return result;
   
+  if (result.done) commitTransaction(conn.jdbc);
+  else rollbackTransaction(conn.jdbc);
+  closeSqlConnection({conn: conn.jdbc})
+   
+  return result;
 }
 
-function saveNewsRaw(save) {  
-  var result = doInsert(
-    {connection: save.connection,
-     sql: 'INSERT INTO news_raw (idnews, html_zip) values (?,?)',
-     data: [save.generatedKey, save.zip],
-     types: ['Int', 'Blob']});
-  return result.isOk;
+function saveNews_test() {
+  var page = include('статья с апдейтом');
+  var data = getDataFromNewsPage(page);
+  data = mergeObjects([data,{
+    key: ('test_' + Date.parse(new Date()).toString()).substr(0,14),
+    link: 'CODE_SAVE_SKIPED = 301 так как дата редактирования позже даты апдейта',
+    id: 1,
+    lastEdited: '2018-01-16T16:45:47',
+    sourceId: RIA_SOURCE_ID  
+  }]);
+  var data2 = {};
+    data2 = mergeObjects([data2,data]);
+    data2 = mergeObjects([data2,{
+    key: ('test_' + Date.parse(new Date()).toString()).substr(0,14),
+    link: 'CODE_UPDATE_SUCCESSFULLY = 302 так как дата редактирования меньше даты апдейта',
+     lastEdited: '2018-01-11T16:45:47',
+     }]); 
+  var page = include('простая статья');
+  var data1 = getDataFromNewsPage(page);
+  data1 = mergeObjects([data1,{
+    key: ('test_' + Date.parse(new Date()).toString()).substr(0,14),
+    link: 'CODE_SAVE_SKIPED = 301 так как нет даты апдейта',
+    id: 1,
+    lastEdited: '2018-01-15T16:45:47',
+    sourceId: RIA_SOURCE_ID,
+   
+  }]);
+  var data3 = getDataFromNewsPage(page);
+  data3.key = ('test_' + Date.parse(new Date()).toString()).substr(0,14);
+  data3.link = 'CODE_SAVE_SUCCESSFULLY = 300 - новая статья';
+  data3.sourceId = RIA_SOURCE_ID
+  doDelete({sql: "DELETE FROM news WHERE key_from_source LIKE \'test_%\'"})
+  return runGroupTests(
+    {name: 'saveNews',
+     should: [
+       {done: true, code: CODE_SAVE_SKIPED},
+       {done: true, code: CODE_UPDATE_SUCCESSFULLY},
+       {done: true, code: CODE_SAVE_SKIPED},
+       {done: true, code: CODE_SAVE_SUCCESSFULLY},
+//       {done: false, code: CODE_SAVE_FAILED}
+     ],
+     data: [
+       data, 
+       data2, 
+       data1, 
+       data3, 
+//       {}
+     ],
+     compare: [
+       '(result.done === pattern.done)',
+       '(result.code === pattern.code)'
+     ],
+     online: 'TEST_STOP_SQL_EXEC',
+     clean: 'doDelete({sql: "DELETE FROM news WHERE key_from_source LIKE \'' + data.key + '%\'"})'
+    });
 }
 
 function saveNewsRubrics(save) {  
@@ -290,8 +378,8 @@ function saveParagraphReference(save) {
   result = doInsert(dataToInset);
   if (!result.isOk) {
     saveCrawlerLog({
-      message: "Не удалось сохранить данные",
-      obj: result.error,
+      message: "Не удалось сохранить ссылку на связанную новость",
+      obj: mergeObjects([save, result.error]),
       source: "saveParagraphReference",
       event: LOG_EVENT_ERROR_SAVING});
     // todo запись в лог про невозможнось сохранить
@@ -300,41 +388,6 @@ function saveParagraphReference(save) {
 }
 
 ////////////////////////////////
-
-function saveNews_test() {
-  var page = include('простая статья');
-  var data = getDataFromNewsPage(page);
-  data.key = ('test_' + Date.parse(new Date()).toString()).substr(0,14);
-  data.zip = zipArticlePage(page).setName('/culture/20171118/1509076610'.replace(/\//ig, '-')+'.html.zip');
-  doDelete({sql: "DELETE FROM news WHERE key_from_source LIKE \'" + data.key + "%\'"})
-  return runGroupTests(
-    {name: 'saveNews',
-     should: [
-       {done: true, code: CODE_SAVE_SUCCESSFULLY},
-       {done: false, code: CODE_SAVE_FAILD}
-     ],
-     data: [ 
-       {title: data.title,
-        tags: data.tags,
-        rubrics: data.rubrics,
-        date: data.date,
-        key: data.key,
-        link: 'тест',
-        sourceId: RIA_SOURCE_ID,
-        zip: data.zip,
-        body: data.body,
-        isCorrect: true,
-        code: CODE_CORRECT_ARTICLE},
-       {}
-     ],
-     compare: [
-       '(result.done === pattern.done)',
-       '(result.code === pattern.code)'
-     ],
-     online: 'TEST_STOP_SQL_EXEC',
-     clean: 'doDelete({sql: "DELETE FROM news WHERE key_from_source LIKE \'' + data.key + '%\'"})'
-    });
-}
 
 function saveParagraphReference_test() {
   doDelete({sql: "DELETE FROM news WHERE title = 'Тест для saveParagraphReferences'"});
@@ -399,20 +452,6 @@ function saveNewsRubrics_test() {
             {rubrics: ['rubric1', 'rubric2'],
              generatedKey: insertedNews.generatedKey}
            ],
-     online: 'TEST_STOP_SQL_EXEC',
-     cleanAll: 'doDelete({sql: "DELETE FROM news WHERE idnews = ' + insertedNews.generatedKey + '"})'
-    });
-}
-
-function saveNewsRaw_test() {
-  var zip = zipArticlePage('test');
-  var insertedNews = doInsertTestNews_data(); 
-  return runGroupTests(
-    {name: 'saveNewsRaw',
-     should: [ true ],
-     data: [ {generatedKey: insertedNews.generatedKey,
-              zip: zip}
-     ],
      online: 'TEST_STOP_SQL_EXEC',
      cleanAll: 'doDelete({sql: "DELETE FROM news WHERE idnews = ' + insertedNews.generatedKey + '"})'
     });

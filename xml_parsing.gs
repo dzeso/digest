@@ -134,22 +134,51 @@ function getPartOfTextWithData(dataSource) {
       partsText = [],
       firstMark = '',
       lastMark =  '';
-
-  (dataSource.lastMark === '') ? lastMark = 'getPartOfTextWithData' : lastMark = dataSource.lastMark;
-  (dataSource.firstMark === '') ? firstMark = 'getPartOfTextWithData' : firstMark = dataSource.firstMark;
-  (dataSource.text === null) ? partsText = [''] : partsText = dataSource.text.split(firstMark);
-
-  if (partsText.length < 2) partsText[1]=partsText[0];
-  partsText = partsText[1].split(lastMark);
-  if (partsText.length > 0) result = partsText[0]+dataSource.endMark;
+ 
+  if (!dataSource.text || dataSource.text === '') return result;
+  if (dataSource.text.indexOf(dataSource.firstMark) >= 0 && 
+      dataSource.text.indexOf(dataSource.lastMark) >= 0) {
+    
+    
+    (dataSource.lastMark === '') ? lastMark = 'getPartOfTextWithData' : lastMark = dataSource.lastMark;
+    (dataSource.firstMark === '') ? firstMark = 'getPartOfTextWithData' : firstMark = dataSource.firstMark;
+    (dataSource.text === null) ? partsText = [''] : partsText = dataSource.text.split(firstMark);
+    
+    if (partsText.length < 2) partsText[1]=partsText[0];
+    partsText = partsText[1].split(lastMark);
+    if (partsText.length > 0) result = partsText[0]+dataSource.endMark;
+  }
   
   return result;
 }
 
+function getPartOfTextWithData_test() {
+  var textBlock = 
+      'хвост <div class="b-article__main">' +
+        '<div>текст блока'+
+          '<div class="b-comments> хвост';
+  return runGroupTests(
+    {name: 'getPartOfTextWithData',
+     should: [
+       'хвост <div class="b-article__main"><div>текст блока</div>',
+       '','','ёё','',
+       '<div>\текст блока\</div>'
+     ],
+     data: [
+       {text: textBlock, firstMark: '', lastMark: '<div class="b-comments', endMark: '</div>'},
+       {text: '', firstMark: '<div class="b-article__main">',lastMark: '<div class="b-comments',endMark: '</div>'},
+       {text: '',firstMark: '', lastMark: '', endMark: ''},
+       {text: 'ёё', firstMark: 'ёё', lastMark: 'ёё', endMark: 'ёё'},
+       {text: null, firstMark: null, lastMark: null, endMark: ''},
+       {text: textBlock, firstMark: '<div class="b-article__main">', lastMark: '<div class="b-comments', endMark: '</div>'}
+     ]
+    });
+}
 
 function getParsedPartOfHtmlPage(dataSource) {
-  var nodeText = getPartOfTextWithData(dataSource);
+  var nodeText = getPartOfTextWithData(dataSource); 
   var parsed = null;
+  if (nodeText === '') return parsed;
   try {
     var xml = XmlService.parse(nodeText);
     parsed = getNodeParsed(xml.getRootElement());
@@ -333,43 +362,3 @@ function getNodeChildByAttributes_test() {
     });
 }
 
-function getPartOfTextWithData_test() {
-  var textBlock = 
-      'хвост <div class="b-article__main">' +
-        '<div>текст блока'+
-          '<div class="b-comments> хвост';
-  return runGroupTests(
-    {name: 'getPartOfTextWithData',
-     should: [
-       'хвост <div class="b-article__main"><div>текст блока</div>',
-       '</div>','','ёё','',
-       '<div>\текст блока\</div>'
-     ],
-     data: [
-       {text: textBlock,
-        firstMark: '',
-        lastMark: '<div class="b-comments',
-        endMark: '</div>'},
-       {text: '',
-        firstMark: '<div class="b-article__main">',
-        lastMark: '<div class="b-comments',
-        endMark: '</div>'},
-       {text: '',
-        firstMark: '',
-        lastMark: '',
-        endMark: ''},
-       {text: 'ёё',
-        firstMark: 'ёё',
-        lastMark: 'ёё',
-        endMark: 'ёё'},
-       {text: null,
-        firstMark: null,
-        lastMark: null,
-        endMark: ''},
-       {text: textBlock,
-        firstMark: '<div class="b-article__main">',
-        lastMark: '<div class="b-comments',
-        endMark: '</div>'}
-     ]
-    });
-}

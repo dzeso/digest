@@ -11,43 +11,42 @@ function runTest_scraping() {
 
 function uploadDataFromNewsPage (param) {
 
-//param {link: "/culture/20171118/1509076610", time: '10:03'}
-
-  var url = RIA_URL_PREFIX + param.link + RIA_URL_POSFIX;
-  var page = getPageByUrl(url);
+  // param = {link:"ria.ru/culture/20170101/1485065256.html", id:946, lastEdited:"16:47", time:"12:44"}   
+  
+  var page = getPageByUrl(param.link);
   var resultUploading = 
-      {url: url,
+      {url: param.link,
        code: page.code,
        done: false};
   if (page.code !== 200) {
     saveCrawlerLog({
-      message: "Проблемы за загрузкой веб страницы "+url,
+      message: "Проблемы за загрузкой веб страницы " + param.link,
       obj: page,
       source: "uploadDataFromNewsPage",
       event: page.code});
     return resultUploading;
   }  
   var data = getDataFromNewsPage(page.text);
+  // todo получить из getDataFromNewsPage дату обновления с сайта
+  data = mergeObjects([data,{
+    key: getKeyFromLink(param.link),
+    link: param.link,
+    id: param.id,
+    lastEdited: param.lastEdited,
+    sourceId: RIA_SOURCE_ID    
+  }]);
   resultUploading.code = data.code;
   if (data.isCorrect) {
-    data.key = getKeyFromLink(param.link);
-    data.link = url;
-    data.zip = zipArticlePage(page.text).setName(param.link.replace(/\//ig, '-')+'.html.zip');
-    data.sourceId = RIA_SOURCE_ID;
-    //todo передать сюда код статьи дату ее создания и редактирования
     var resultSaving = saveNews(data);
     resultUploading.done = resultSaving.done;   
     resultUploading.code = resultSaving.code;
-    // todo контроль результатов записию если новость не пропущена, то при проблемах запись в лог
-    // resultUploading.done - результат операции
-//    saveCrawlerLog({
-//      message: "Новость не удалось сохранить в БД",
-//      obj: url,
-//      source: "uploadDataFromNewsPage",
-//      event: data.code});
+    if (!resultSaving.done || resultSaving.code === CODE_UPDATE_SUCCESSFULLY) 
+      saveCrawlerLog({
+        message: 'Новость ' + param.link + ((resultSaving.done) ? " обновлена" : " не обновлена"),
+        obj: data,
+        source: "saveNews",
+        event: resultSaving.code});
   } else {
-    data.link = url;
-    data.sourceId = RIA_SOURCE_ID;
     saveCrawlerLog({
       message: "Новость не удалось распарсить",
       obj: data,
@@ -73,6 +72,7 @@ function uoloadCurrentNews(date) {
       if (dayNews.length > 0) result.push(dayNews[j]);
     }
   }
+  // todo что если result = []?
  return result;
 }
 
@@ -109,25 +109,44 @@ function uploadDayNews(day) {
   var page = getDayNewsPage(cleanDateForLink(day.date)),
       result = [];
   
-  // todo проверка кода возврата
+  if (page.code !== 200) {
+    saveCrawlerLog({
+      message: "Проблемы за загрузкой списка новостей по РИА за дату " + day.date,
+      obj: page,
+      source: "uploadDayNews",
+      event: page.code});
+    return result;
+  }  
   
-  // todo getDayNewsList - получить полный список
+  var listFromBd = getNewsDateListForDay(day.date);
+  if(!listFromBd[0]) listFromBd[0] = {link: ""};
+  // listFromBd = {link:"ria.ru/culture/20170101/1485065256.html", id:946, lastEdited:"2018-01-01T16:47"}  
   
-  var list = getDayNewsList(
+  var listFromPage = getDayNewsListFromPage(
     {page: page.text,
-     day: day});
-     
-  // list = {link:"/culture/20170101/1485067530", time:"13:21"}     
+     day: day});     
+  // listFromPage = {link:"ria.ru/culture/20170101/1485065256.html", time:"12:44"}     
 
-// todo считать существующие в базе новости с кодом редактирования
-     // добавить данные по ключу и дате обновления и передать в uploadDataFromNewsPage
-     // там в заисимости от ситуации: добавлять - обновлять или пропускать
-     
-  for (var i = 0, len_i = list.length; i < len_i; i++) {
-    result[i] = uploadDataFromNewsPage(list[i]);
+  var j = 0;
+  for (var i = 0, len_i = listFromPage.length; i < len_i; i++) {
+    if (listFromPage[i].link === listFromBd[j].link) {
+      listFromPage[i] = mergeObjects([listFromPage[i], listFromBd[j]]);
+      j++;
+    }
+    result[i] = uploadDataFromNewsPage(listFromPage[i]);
   }
 // result = {code=301.0, done=false, url=ria.ru/culture/20170101/1485067530.html}
   return result;
+}
+
+function uploadDayNews_test() {
+  return runGroupTests(
+    {name: 'uploadDayNews',
+     should: [1,6],
+     data: [{date: "2018-01-17"},{date: "2017-01-01"}],
+     compare: ["pattern === result.length"],
+     online: 'TEST_STOP_WEB_LOAD'
+    });
 }
 
 function getDayNewsPage(day) {
@@ -143,16 +162,6 @@ function uploadSkippedNews_test() { // заглушка, призапуске в
     {name: 'uploadSkippedNews',
      should: [true],
      data: [true],
-     online: 'TEST_STOP_WEB_LOAD'
-    });
-}
-
-function uploadDayNews_test() {
-  return runGroupTests(
-    {name: 'uploadDayNews',
-     should: [1],
-     data: [{date: "2017-01-01", time:"13:20"}],
-     compare: ["pattern === result.length"],
      online: 'TEST_STOP_WEB_LOAD'
     });
 }
@@ -199,7 +208,7 @@ function uploadDataFromNewsPage_test() {
   return runGroupTests(
     {name: 'uploadDataFromNewsPage',
      should: [ {done: false, code: 301} ],
-     data: [ {link: "/culture/20171118/1509076610", time: '10:03'} ],
+     data: [ {link: "ria.ru/culture/20171118/1509076610.html", time: '10:03'} ],
      compare: [ "pattern.done === result.done" ],
      online: 'TEST_STOP_WEB_LOAD'
     });

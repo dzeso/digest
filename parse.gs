@@ -1,6 +1,6 @@
 function runTest_parse() { 
   
-  runBlockTests(['getDayNewsList',
+  runBlockTests(['getDayNewsListFromPage',
                  'getDataFromNewsPage',
                  'getArticleBody',
                  'isSupportedTypeArticle',
@@ -9,14 +9,14 @@ function runTest_parse() {
                  'getArticleTags',
                  'extractRefTagType',
                  'getArticleDate',
-                 'zipArticlePage',
+                 'getArticleUpdateDate',
                  'splitDateTime'
                 ]); 
     
   
 }
 
-function getDayNewsList(param) {
+function getDayNewsListFromPage(param) {
   //  param {page & day {date & time}}
   var dateTagBegin = '<div class="b-list__item-time"><span>',
       dateTagEnd = '<\\/span><\\/div>',
@@ -36,66 +36,50 @@ function getDayNewsList(param) {
      flag: 'g',
      text: text});
   if (listLinks.length === listTimes.length) {
-   
-    var j=0, time = '', timeParam;
-    (param.day.time) ? timeParam = param.day.time : timeParam = '00:00';
-    
     for (var i = 0, len_i = listLinks.length; i < len_i; i++) { 
-      //       todo проверка что время новости полученное после разбора больше чем время переданное
-      //       если ок, то сохраняем, иначе - пропускаем эту новость
-      
-      // убрать контроль времени, проверку перенести в сохранение
-      time = listTimes[i].match(/\d\d:\d\d/)[0];
-      if (time > timeParam) {
-        result[j++] = 
-          {link: listLinks[i],
-           time: time};
-      }
+      result.push( 
+        {link: RIA_URL_PREFIX + listLinks[i] + RIA_URL_POSFIX,
+         time: listTimes[i].match(/\d\d:\d\d/)[0]
+        });
     }
   }
   else {
     saveCrawlerLog({
       message: "Не удалось корректно разобрать странцу с новостями за день. Список ссылок на новости не равен списку времени публикации ",
       obj: param,
-      source: "getDayNewsList",
+      source: "getDayNewsListFromPage",
       event: LOG_EVENT_ERROR_PARSING});
     return [];
   }
   return result;
 }
 
-  function getDayNewsList_test() {
+  function getDayNewsListFromPage_test() {
   var page = include('ria.ru/culture/20170101');
   var page2 = getDayNewsPage(cleanDateForLink('2017-12-17'));  
   return runGroupTests(
-    {name: 'getDayNewsList',
+    {name: 'getDayNewsListFromPage',
      should: [
-       [{link:"/culture/20171217/1511139410", time:"20:59"}, 
-        {link:"/religion/20171217/1511138747", time:"20:28"}, 
-        {link:"/culture/20171217/1511128630", time:"15:13"}, 
-        {link:"/culture/20171217/1510516333", time:"08:00"},
-        {link:"/culture/20171217/1511113993", time:"01:04"}, 
-        {link:"/culture/20171217/1511113825", time:"00:43"}], 
+       [{link:"ria.ru/culture/20171217/1511139410.html", time:"20:59"}, 
+        {link:"ria.ru/religion/20171217/1511138747.html", time:"20:28"}, 
+        {link:"ria.ru/culture/20171217/1511128630.html", time:"15:13"}, 
+        {link:"ria.ru/culture/20171217/1510516333.html", time:"08:00"},
+        {link:"ria.ru/culture/20171217/1511113993.html", time:"01:04"}, 
+        {link:"ria.ru/culture/20171217/1511113825.html", time:"00:43"}], 
         [],
        [
-         {link: "/culture/20170101/1485067530", time:"13:21"},
-         {link: "/culture/20170101/1485066695", time:"13:06"},
-         {link: "/culture/20170101/1485065256", time:"12:44"},
-         {link: "/culture/20170101/1484831978", time:"11:00"},
-         {link: "/culture/20170101/1485060317", time:"10:38"},
-         {link: "/culture/20170101/1485050779", time:"02:31"}],
-       [
-         {link: "/culture/20170101/1485067530", time:"13:21"},
-         {link: "/culture/20170101/1485066695", time:"13:06"},
-         {link: "/culture/20170101/1485065256", time:"12:44"}]
+         {link: "ria.ru/culture/20170101/1485067530.html", time:"13:21"},
+         {link: "ria.ru/culture/20170101/1485066695.html", time:"13:06"},
+         {link: "ria.ru/culture/20170101/1485065256.html", time:"12:44"},
+         {link: "ria.ru/culture/20170101/1484831978.html", time:"11:00"},
+         {link: "ria.ru/culture/20170101/1485060317.html", time:"10:38"},
+         {link: "ria.ru/culture/20170101/1485050779.html", time:"02:31"}]
      ],
      data: [
        {page: page2.text, day: {date: '2017-12-17'}},
        {page: "page", day: "day"},
        {page: page, day: {date: '2017-01-01',
-                          time: '00:00'}},
-       {page: page, day: {date: '2017-01-01',
-                          time: '11:00'}}
+                          time: '00:00'}}
      ],
      compare: [
        "JSON.stringify(pattern) === JSON.stringify(result)"
@@ -104,26 +88,30 @@ function getDayNewsList(param) {
 }
 
 function getDataFromNewsPage(page) {
-  var text = '',
+  var text = page,
       data = {
         title: '',
         tags: [],
         rubrics: [],
         date: '',
         body: [],
-        isCorrect: true,
-        code: CODE_CORRECT_ARTICLE},
+        isCorrect: false,
+        code: LOG_EVENT_UNSUPPORTED_TYPE_ARTICLE},
       typeArticle = {};
   
-  typeArticle = isSupportedTypeArticle(page); 
+  typeArticle = isSupportedTypeArticle(text); 
   
   if (typeArticle.supported && typeArticle.type === 'b-article') {  
-    text = prepareArticlePageForParsing (page);
-    data.title = getArticleTitle(text);
-    data.tags = getArticleTags(text);
-    data.rubrics = getArticleRubrics(text);
-    data.date = getArticleDate(text);
-    data.body = getArticleBody(text);
+    text = prepareArticlePageForParsing (text);
+      data = {
+        title: getArticleTitle(text),
+        tags: getArticleTags(text),
+        rubrics: getArticleRubrics(text),
+        date: getArticleDate(text),
+        dateUpdate: getArticleUpdateDate(text),
+        body: getArticleBody(text),
+        isCorrect: true,
+        code: CODE_CORRECT_ARTICLE};
 //    todo ??? сделать проверку функцией в блоке записи данных
     if (data.title === '' ||
         data.date === '' ||
@@ -132,15 +120,7 @@ function getDataFromNewsPage(page) {
       data.isCorrect = false;
     }
   }
-  else {
-    data.code = LOG_EVENT_UNSUPPORTED_TYPE_ARTICLE; 
-    data.isCorrect = false;
-  }
   return data;
-}
-
-function zipArticlePage (page) {
-  return Utilities.zip([Utilities.newBlob(page)]);  
 }
 
 function prepareArticlePageForParsing (page) {
@@ -310,7 +290,6 @@ function getArticleDate(text) {
      endMark: '</div>'
     }
   ); 
-
   return (parsed !== null) ? 
     getValueNodeAttribute(
     {root: parsed,
@@ -323,7 +302,35 @@ function getArticleDate_test() {
   return runGroupTests(
     {name: 'getArticleDate',
      should: ['2017-11-18T10:03', ''],
-     data: [ 
+     data: [   
+       prepareArticlePageForParsing(include('простая статья')),
+       include('лонгрид')
+     ]
+    });
+}
+
+function getArticleUpdateDate(text) {
+  var parsed = getParsedPartOfHtmlPage(
+    {text: text, 
+     firstMark: '<div class="b-article__info-date-update">', 
+     lastMark: '</div>',
+     endMark: ''
+    }
+  ); 
+  return (parsed) ? 
+    getValueNodeAttribute(
+    {root: parsed.children[0],
+     attribute: 'datetime'
+    }) : 
+  undefined;
+}
+
+function getArticleUpdateDate_test() {
+  return runGroupTests(
+    {name: 'getArticleUpdateDate',
+     should: ["2018-01-15T09:59", '', ''],
+     data: [   
+       prepareArticlePageForParsing(include('статья с апдейтом')),
        prepareArticlePageForParsing(include('простая статья')),
        include('лонгрид')
      ]
@@ -563,6 +570,15 @@ function getDataFromNewsPage_test() {
 }
 
 function getArticleBody_test() {
+//  var d = [];
+//  var count = 100;
+//  var text = prepareArticlePageForParsing(include('простая статья'))
+//  d[0] = new Date();
+//  for (var i = 0; i < count; i++) {
+//    getArticleBody(text)
+//  }
+//  d[1] = new Date();
+//  Logger.log ('Среднее время разбора текста = ' + (d[1]-d[0])/1000/count);
   return runGroupTests(
     {name: 'getArticleBody',
      should: [
@@ -672,20 +688,6 @@ function getArticleTags_test() {
      compare: [
        '(JSON.stringify(result) === JSON.stringify(pattern))',
        '(result.length === pattern.length)'
-     ]
-    });
-}
-
-function zipArticlePage_test() {
-  return runGroupTests(
-    {name: 'zipArticlePage',
-     should: [
-       "archive.zip"],
-     data: [ 
-       include('лонгрид')
-     ],
-     compare: [
-       '(result.getName() === pattern)'
      ]
     });
 }

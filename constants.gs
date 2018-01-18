@@ -11,7 +11,10 @@ var REFERENCE_TAG_TYPES = ['undefined', 'event','location', 'person', 'organizat
 var CODE_CORRECT_ARTICLE = 200,
 //    CODE_UNCORRECT_ARTICLE = 201,
     CODE_SAVE_SUCCESSFULLY = 300,
-    CODE_SAVE_FAILD = 301;
+    CODE_SAVE_SKIPED = 301,
+    CODE_UPDATE_SUCCESSFULLY = 302,
+    CODE_SAVE_FAILED = 320,
+    CODE_UPDATE_FAILED = 321;
 
 var ROW_DELIMITER = '\u0001',
     FIELD_DELIMITER = '\u0002';
@@ -27,6 +30,7 @@ var CACHE_EXPIRATION_TIME = 600,
     CACHE_NEWS_ID_BY_KEY = 'nbk_',
     CACHE_NEWS_BY_ID = 'nbi_',
     CACHE_NEWS_BY_DATE = 'nbd_';
+    CACHE_NEWS_LIST_BY_DATE = 'nlbd_';
     
 var UPLOAD_PERIOD_MAX = 2; // 50 дней
 
@@ -49,6 +53,7 @@ function runTests() {
   
   initRefTables();
   runTest_lib();
+  runTest_lib_lodash();
   runTest_parse();
   runTest_xml_parsing:
   runTest_scraping();

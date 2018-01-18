@@ -6,7 +6,8 @@ function runTest_get_data() {
                  'getSkipsDateInNews',
                  'getLastNewsDate',
                  'getNewsForPeriod',
-                 'getNewsFromId'
+                 'getNewsFromId',
+                 'getNewsDateListForDay'
                 ]);
 }
 
@@ -77,6 +78,42 @@ return runGroupTests(
     });
 }
 
+function getNewsDateListForDay(date) {
+  if (!date) return null;
+  
+  var idNewsList;
+  var qq = !isToday(date);
+  if (!isToday(date)) idNewsList = getCacheObject(CACHE_NEWS_LIST_BY_DATE + date);
+  if (!idNewsList) {
+    idNewsList = getDataFromTable(
+      {sql: "SELECT idnews, last_edited, link FROM news WHERE date = ? ORDER BY time DESC",
+       resultTypes: ['Int', 'String', 'String'],
+       resultFields: ['id', 'lastEdited', 'link'],
+       whereData: [date],
+       whereTypes: ['String']
+      });
+    if (idNewsList.length > 0 && !isToday(date)) 
+      setCacheObject({key: CACHE_NEWS_LIST_BY_DATE + date, value: idNewsList, time: CACHE_MAX_TIME});
+  }
+  
+  return idNewsList;
+}
+
+function getNewsDateListForDay_test() {
+var cache = CACHE_MODE;
+  CACHE_MODE = 0;
+return runGroupTests(
+    {name: 'getNewsDateListForDay',
+     should: [0, 1, 4],
+     data: ['2018-01-17','2018-01-01', '2018-01-02'],
+     online: 'TEST_STOP_SQL_EXEC',
+     cleanAll: 'CACHE_MODE = ' + cache +';',
+     compare: [
+       "pattern === lengthTest(result)"
+     ]
+    });
+}
+
 function getNewsByDate(date) {
   if (!date) return null;
   
@@ -103,11 +140,14 @@ function getNewsByDate(date) {
 }
 
 function getNewsByDate_test() {
+var cache = CACHE_MODE;
+  CACHE_MODE = 1;
 return runGroupTests(
     {name: 'getNewsByDate',
      should: [1, 4],
      data: ['2018-01-01', '2018-01-02'],
      online: 'TEST_STOP_SQL_EXEC',
+     cleanAll: 'CACHE_MODE = ' + cache +';',
      compare: [
        "pattern === lengthTest(result)"
      ]

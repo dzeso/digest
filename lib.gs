@@ -19,40 +19,23 @@ function runTest_lib() {
   runTest('getDatesListLag');
   runTest('getDateShif');
   runTest('isToday');
-  
-//  работа со строками
-  
-  runBlockTests(['validateTextLength'
-                ]);
                 
   //  работа с преобразованием типов
   
-  runBlockTests(['isNumber'
-                ]); 
+  runBlockTests(
+    ['isNumber'
+    ]); 
   
   //  работа с кешем
   
-  runBlockTests(['getCache',
-                 'getCacheObject',
-                 'getCacheId',
-                 'setCache',
-                 'setCacheObject',
-                 'setCacheId'
-                ]); 
-}
-
-function validateTextLength(data) {
-  if(!data) return data;
-  var qq = _.truncate(data.text, {'length': data.length,'omission': ' [...]'});
-  return  _.truncate(data.text, {'length': data.length,'omission': ' [...]'});
-}
-
-function validateTextLength_test() {
-  return runGroupTests(
-    {name: 'validateTextLength',
-     should: [undefined ,'', "12 [...]", "1234567890"],
-     data: [undefined, {}, {text: "1234567890", length: 8},{text: "1234567890", length: 12}]
-    });
+  runBlockTests(
+    ['getCache',
+     'getCacheObject',
+     'getCacheId',
+     'setCache',
+     'setCacheObject',
+     'setCacheId'
+    ]); 
 }
 
 function getCache(key) {
@@ -100,7 +83,7 @@ function setCacheObject(data) {
 
 function setCache(data) {
   if (!CACHE_MODE) {
-    return data;
+    return null;
   }
   var cache = CacheService.getScriptCache(), 
       sec = 0;
@@ -224,6 +207,7 @@ function cleanHtmlForParsing(text) {
   var result = removeHttpEntities(text);
   result = result.replace(/\r|\n|<br>|&/ig, ' ');
   result = result.replace(/<script.*?<\/script>/mig, '');
+  result = result.replace(/<iframe.*?<\/iframe>/mig, '');
   result = result.replace(/<img.*?>/mig, '');
   result = result.replace(/<input.*?>/mig, '');
   result = result.replace(/<meta.*?>/mig, '');
@@ -432,7 +416,7 @@ function getKeyFromLink_test() {
   return runGroupTests(
     {name: 'getKeyFromLink',
      should: ['1485067530','1485067530','',''],
-     data: ["/culture/20170101/1485067530.html", "/culture/20170101/1485067530", "/culture/20170101/14850буквы66695", '']
+     data: ["ria.ru/culture/20170101/1485067530.html", "/culture/20170101/1485067530", "/culture/20170101/14850буквы66695", '']
     });
 }
 

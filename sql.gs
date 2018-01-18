@@ -6,6 +6,7 @@ function runTest_sql() {
                  'getResultsetValue',
                  'closeSqlConnection',
                  'doInsert',
+                 'doUpdate',
                  'doDelete',
                  'doSelect',
                  'getDataFromTable',
@@ -19,7 +20,7 @@ function getDataFromTable(request) {
 //  
 //       sql: "SELECT idnews FROM news WHERE key_from_source = ?",
 //       resultTypes: ['Int'],
-//       resultFields: ['Int'], - eсли поля нет, то результат массив из первого значения резалсета, иначе объект с указанными полями
+//       resultFields: ['id'], - eсли поля нет, то результат массив из первого значения резалсета, иначе объект с указанными полями
 //       whereData: [key],
 //       whereTypes: ['String']
   
@@ -186,6 +187,7 @@ function doInsert(insert) {
   }
   catch(error){
     result.error = error;
+    Logger.log(error);
   }
   finally{
     (insert.connection === undefined) ? 
@@ -194,6 +196,64 @@ function doInsert(insert) {
     : closeSqlConnection({stmt: stmt})
     return result;
   }
+}
+
+function doUpdate(update) {
+  
+//  connection: активный коннект к базе
+//  sql: текст sql запроса
+//  data: [] - массив переменных для вставки,
+//  types: ['String', 'Int', 'Blob'] - массив типов переменных для вставки
+        
+  var result = {isOk: false,
+                count: 0,
+                error: '',
+                generatedKey: 0};
+  
+  var connection = getConn(update.connection);
+  if (!connection.isOk) { 
+    return result; 
+  }   
+  try {    
+    var stmt = connection.jdbc.prepareStatement(update.sql);
+    eval(setStmtValue({value: 'update.data',
+                       types: update.types})
+        );
+    result.count = stmt.executeUpdate();    
+    result.isOk = true;
+  }
+  catch(error){
+    result.error = error;
+  }
+  finally{
+    (update.connection === undefined) ? 
+      closeSqlConnection({stmt: stmt,
+                          conn: connection.jdbc})
+    : closeSqlConnection({stmt: stmt})
+    return result;
+  }
+}
+
+function doUpdate_test() {
+  var insert1 = doInsert({sql: 'INSERT INTO test (testcol, testcol1) values (?,?)',
+                         data: ['test1', 1],
+                         types: ['String', 'Int']});
+  return runGroupTests(
+    {name: 'doUpdate',
+     should: [1,0],
+     data: [ {sql: 'UPDATE test SET testcol = ? WHERE idtest = ?',
+              data: [ 3, insert1.generatedKey],
+              types: ['Int', 'Int']},
+            {sql: 'UPDATE test SET testcol = ? WHERE idtest = ?',
+              data: [ 3, 0],
+              types: ['Int', 'Int']}
+     ],
+     compare: [
+       '(result.count === pattern)'
+     ],
+     online: 'TEST_STOP_SQL_EXEC',
+     clean: 'doDelete({sql: "DELETE FROM test WHERE idtest = ' + insert1.generatedKey +'"})'
+    });
 }
 
 function doSelect(select) {
@@ -319,7 +379,6 @@ function getResultsetValue(resultsetTypes) {
   for (var i = 0, len_i = resultsetTypes.length; i < len_i; i++) {
     result[i] = 'resultset.get' + resultsetTypes[i] + '(' + (i+1) + ')';
   }
-//**  var qq = '[' + result.join(',') + ']';
   return '[' + result.join(',') + ']';
 }
 
@@ -352,9 +411,9 @@ function saveCrawlerLog(log) {
   var obj = (typeof log.obj === 'object') ? JSON.stringify(log.obj) : log.obj,
       message = _.truncate(log.message, {'length': 255,'omission': ' [...]'}),
       source = _.truncate(log.source, {'length': 124,'omission': ' [...]'}); 
-  obj = _.truncate(obj, {'length': 1024,'omission': ' [...]'});
+  obj = _.truncate(obj, {'length': 4096,'omission': ' [...]'});
   
-  return doInsert({sql: 'INSERT INTO crawler_logger (date, source, obj, log, event) values (NOW(),?,?,?,?)',
+  return doInsert({sql: 'INSERT INTO crawler_logger (source, obj, log, event) values (?,?,?,?)',
                    isCommit: true,
                    data: [source, obj, message, log.event],
                    types: ['String', 'String', 'String', 'Int']});
@@ -422,15 +481,10 @@ function getConn_test() {
 }
 
 function doInsert_test() {
-  var blob = Utilities.newBlob('test');
-  var zipPage = Utilities.zip([blob]);
   return runGroupTests(
     {name: 'doInsert',
-     should: [1,1],
-     data: [ {sql: 'INSERT INTO test (testcol, testcol1, testcol2) values (?,?,?)',
-              data: ['test3', 3, zipPage],
-              types: ['String', 'Int', 'Blob']},
-            {sql: 'INSERT INTO test (testcol, testcol1) values (?,?)',
+     should: [1],
+     data: [ {sql: 'INSERT INTO test (testcol, testcol1) values (?,?)',
               data: ['test', 1],
               types: ['String', 'Int']}
      ],
@@ -539,7 +593,7 @@ function saveCrawlerLog_test() {
      should: [1],
      data: [{message: 'Тест работы функции saveCrawlerLog',
               obj: {test: {subtest: 'test'}},
-              source: "saveParagraphReference",
+              source: "saveCrawlerLog",
               event: LOG_EVENT_TEST}
      ],
      compare: [
