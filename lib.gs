@@ -20,12 +20,13 @@ function includeFromGoogleDrive(id) {
   return "<script>" + DriveApp.getFileById(id).getBlob().getDataAsString() + "</script>";
 }
 
-function getNews(param) {
-  console.log('getNews запустился');
-  return ria.getNewsFromId(param);
+function apiGetNews(param) {
+  return ria.apiGetNews(param);
 }
 
 function apiGetRef(param) {
-  console.log('apiGetRef запустился');
   return ria.apiGetRef(param);
+}
+function apiGetUserProfile(param) {
+  return ria.apiGetUserProfile(param);
 }
