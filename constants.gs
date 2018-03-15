@@ -41,8 +41,12 @@ function CODE_RESULT(param) {
     case "SAVE_SUCCESSFULLY": return 300;
     case "SAVE_SKIPED": return 301;
     case "UPDATE_SUCCESSFULLY": return 302;
+    case "UPLOAD_SUCCESSFULLY": return 303;
     case "SAVE_FAILED": return 320;
     case "UPDATE_FAILED": return 321;
+    case "UPLOAD_FAILED": return 322;
+    case "UPLOAD_UNAUTHORIZED": return 323;
+    case "API_CALL_FAILED": return 324;
   }     
 };
 

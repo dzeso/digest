@@ -2,7 +2,9 @@ function runTest_api_get_data() {
 
   runBlockTests(
     ['apiGetRef',
-    'apiGetNews']);
+     'apiGetNews', 
+     'apiGetUserProfile',
+     'apiNewsComments']);
 }
 function apiGetRef(request) {  
 /*request { name: "" - имя справочника
@@ -136,5 +138,58 @@ function apiGetUserProfile_test() {
      compare: [
        '(result < 0 ? false : true) === pattern'
      ],
+    });
+}
+
+function apiNewsComments(request) {  
+/*request { command: "" - имя команды на получение (например только драфты)
+            param: - параметры вызова 
+  result { done: реузльтат исполнения булеан,
+           code: код результата,
+           данные: если они есть}
+*/  
+
+  var result = {
+        done: false,
+        code: CODE_RESULT("API_CALL_FAILED")};
+  if(!request || !request.command || !request.param) return result;   
+
+  switch(request.command) {
+    case "download comments":
+      if (request.param.iduser) result = getUserComments(request.param.iduser);
+      break;          
+    case "set comments mode":
+      result = setUserCommentsMode(request.param);
+      break;          
+    case "upload comments":
+      result = setUserComments(request.param);
+      break;          
+    default:
+      Logger.log ("apiNewsComments: неизвестная команда " + request.command);
+      break;
+  }
+  
+  
+  
+  return result;
+}
+
+function apiNewsComments_test() {
+  var data = dateToChar19();
+  var param = {
+    iduser: 1,
+    comment: [
+      {idc: -1, id: 1, idstatus: 0, mode: 2, review: {rating:4,rubrics:[11,2],text:data,user:2,review:""}},
+      {idc: 1, id: 1, idstatus: 0, mode: 2, review: {rating:4,rubrics:[11,2],text:"обновлена "+data,user:2,review:""}}
+    ]
+  };
+  return runGroupTests(
+    {name: 'apiNewsComments',
+     should: [true, true, true, false],
+     data: [{command: "download comments", param: {iduser: 1}},
+            {command: "set comments mode", param: {iduser: 1, idclist: [1], mode: 4}},
+            {command: "upload comments", param: param},
+            {command: "download comments", param: {}}],
+     compare: ["result.done === pattern"]
     });
 }

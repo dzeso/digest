@@ -117,7 +117,7 @@ function getUserProfileByKey(userKey) {
   }
   result = {  
     id: userProfile[0].id, 
-    key: {key: userKey},
+    key: userKey,
     name: userProfile[0].name, 
     email: userProfile[0].email, 
     config: JSON.parse(userProfile[0].config),
