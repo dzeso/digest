@@ -6,7 +6,7 @@ function loadJSFromGoogleDrive(id) {
 
 function doGet() {
   return HtmlService
-      .createTemplateFromFile('index')
+      .createTemplateFromFile('UI/index')
       .evaluate()
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui');
 }
@@ -33,4 +33,7 @@ function apiGetRef(param) {
 }
 function apiGetUserProfile(param) {
   return ria.apiGetUserProfile(param);
+}
+function apiReports(param) {
+  return ria.apiReports(param);
 }
